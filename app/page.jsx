@@ -3,8 +3,8 @@ import { Database } from "@tableland/sdk";
 import { Signer} from "ethers";
 import React, { useState } from 'react';
 import lighthouse from '@lighthouse-web3/sdk';
+import { Wallet, getDefaultProvider } from "ethers";
 import { providers } from 'ethers';
-
 
 
 function App() {
@@ -22,31 +22,33 @@ function App() {
     gender: '',
     walletAddress: '',
   });
-  const tableName = "sexy"; 
-  const db = new Database({account});
-  const prefix= "hot";
+  const wallet = new Wallet('ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80')
+  const provider = getDefaultProvider("http://127.0.0.1:8545");
+  const signer = wallet.connect(provider);
+  const db = new Database({ signer });
+  let tableName;
+  const prefix= "cost";
   async function storeUserData(ethereumAddress, cid) {
     try {
-  
-      const { meta: insertResult } = await db
-      .prepare(`CREATE TABLE ${prefix} (ethereumAddress TEXT, cid TEXT);`)
-      .run();
- const { name } = create.txn;
-
+      // if (!isTableCreated) {
+      // const { meta: create } = await db
+      // .prepare(`CREATE TABLE "${prefix}" (ethereumAddress text, cid text);`)
+      // .run();
+      // tableName = create.txn.name; // Assign the value to 'tableName'
+      // isTableCreated = true; 
+      // console.log(`Table "${tableName}" created.`);
+      // }
+      // const { name } = create.txn;   
       const { meta: insert } = await db
-      .prepare(`INSERT INTO ${name} (id, val) VALUES (?, ?);`)
+      .prepare(`INSERT INTO "cost_31337_46"  (ethereumAddress,cid ) VALUES (?, ?);`)
       .bind(account, cid)
       .run();
     await insert.txn.wait();
-    const tableland = Database({ account });
       console.log(`Stored Ethereum address: ${ethereumAddress} with CID: ${cid} successfully.`);
-      (async () => {
-        const { results } = await db.prepare(`SELECT * FROM ${name};`).all();
-        console.log(results);
-      })();
-    } catch (error) {
-      console.log("pew error ");
-      console.error("Error for tat is:", error);
+
+ } 
+    catch (error) {
+      console.error("Error for  is:", error);
     }
   }
 
@@ -102,6 +104,7 @@ const connectWallet = async () => {
 const handleStoreUserData = async () => {
   try{ 
      await storeUserData(account, cid);
+     console.log("successfully stored bitch");
   }
   catch(e){
     console.log(e.response)
@@ -199,7 +202,7 @@ const handleStoreUserData = async () => {
       </form>
 </div>
 <div>
-<button className="text-white p-5 m-4 bg-slate-600" onClick={handleStoreUserData}>Store User Data</button>
+<button className="text-white p-5 m-4 bg-slate-600" onClick={handleStoreUserData}>submits</button>
 </div>
     </div>
   );
