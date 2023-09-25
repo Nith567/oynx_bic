@@ -1,15 +1,25 @@
 'use client'
 import { Database } from "@tableland/sdk";
+import { ethers } from "ethers";
 import { Signer} from "ethers";
 import React, { useState } from 'react';
 import lighthouse from '@lighthouse-web3/sdk';
+import { toast } from "react-hot-toast";
 import { Wallet, getDefaultProvider } from "ethers";
-import { providers } from 'ethers';
+import { generate } from "@lighthouse-web3/kavach";
+import { getAuthMessage, saveShards, shardKey, recoverKe,AuthMessage, getJWT} from "@lighthouse-web3/kavach";
 
-
+import abi from '../app/contract/Starter.json'
+const contractAddr='0xa985B5B840De07B2180bc62a5bB386a4819B3f13'
+const contractAbi=abi;
 function App() {
   const[cid,SetCid]=useState("");
   const [account, setAccount] = useState('None');
+  const [state, setState] = useState({
+    provider: null,
+    signer: null,
+    contract: null,
+  });
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -22,25 +32,28 @@ function App() {
     gender: '',
     walletAddress: '',
   });
-  const wallet = new Wallet('ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80')
-  const provider = getDefaultProvider("http://127.0.0.1:8545");
-  const signer = wallet.connect(provider);
-  const db = new Database({ signer });
-  let tableName;
-  const prefix= "cost";
+
+  const {signer}=state
+
+ 
   async function storeUserData(ethereumAddress, cid) {
     try {
-      // if (!isTableCreated) {
-      // const { meta: create } = await db
-      // .prepare(`CREATE TABLE "${prefix}" (ethereumAddress text, cid text);`)
-      // .run();
-      // tableName = create.txn.name; // Assign the value to 'tableName'
-      // isTableCreated = true; 
-      // console.log(`Table "${tableName}" created.`);
-      // }
+      const privateKey = "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
+const wallet = new Wallet(privateKey);
+      const provider = getDefaultProvider("http://127.0.0.1:8545");
+      const signers = wallet.connect(provider);
+      const db = new Database({signers} );
+//       const prefix= "Filldb";
+//       const { meta: create } = await db
+//       .prepare(`CREATE TABLE "${prefix}" (ethereumAddress text primary key, cid text);`)
+//       .run();
+//       const {name} = create.txn // Assign the value to 'tableName'
+// console.log(
+//   "so inserted is "+name
+// );
       // const { name } = create.txn;   
       const { meta: insert } = await db
-      .prepare(`INSERT INTO "cost_31337_46"  (ethereumAddress,cid ) VALUES (?, ?);`)
+      .prepare(`INSERT INTO "Filldb_31337_3"  (ethereumAddress,cid ) VALUES (?, ?);`)
       .bind(account, cid)
       .run();
     await insert.txn.wait();
@@ -92,7 +105,13 @@ const connectWallet = async () => {
             window.ethereum.on('accountsChanged', () => {
                 window.location.reload();
             });
-            setAccount(accounts[0]);
+
+            const provider = new ethers.providers.Web3Provider(window.ethereum);
+            const signer = provider.getSigner();
+            const address = await signer.getAddress(); // Wait for the address to be feteched
+            const contract = new ethers.Contract(contractAddr, contractAbi, signer);
+            setState( {provider, signer, contract} );
+            setAccount(accounts[0]); 
         } else {
             alert('Please install MetaMask');
         }
@@ -112,6 +131,75 @@ const handleStoreUserData = async () => {
 };
 
 
+  const encryptionSignature = async() =>{
+    const provider = new ethers.providers.Web3Provider(window.ethereum);
+    const signer = provider.getSigner();
+    const address = await signer.getAddress();
+    const messageRequested = (await lighthouse.getAuthMessage(address)).data.message;
+    const signedMessage = await signer.signMessage(messageRequested);
+    return({
+      signedMessage: signedMessage,
+      publicKey: address
+    });
+  }
+
+
+const uploadFileEncrypted = async(file) =>{
+
+  const sig = await connectWallet();
+  const response = await lighthouse.uploadEncrypted(
+    file,
+    "f27b595e.d7d42cff4b1d4dcab8a5f891a35d986c",
+    sig.publicKey,
+    sig.signedMessage,
+    null,
+    progressCallback
+  );
+   console.log(response.data);
+   const {Hash}=response.data[0]
+  /*
+    output:
+      data: [{
+        Name: "c04b017b6b9d1c189e15e6559aeb3ca8.png",
+        Size: "318557",
+        Hash: "QmcuuAtmYqbPYmPx3vhJvPDi61zMxYvJbfENMjBQjq7aM3"
+      }]
+    Note: Hash in response is CID.
+  */
+}
+
+
+async function main() {
+
+
+
+  // **cid key 
+//   const knownKey =
+//   "554f886019b74852ab679258eb3cddf72f12f84dd6a946f8afc4283e48cc9466";
+//   const { isShardable, keyShards } = await shardKey(knownKey);
+//   console.log(isShardable); // true
+// console.log(keyShards.map(e=>e.key));
+//   //recover keys from shards
+//   const { masterKey } = await recoverKey(keyShards);
+// console.log(masterKey,knownKey );
+//   //check if the key recovered was recovered
+//   console.log(masterKey === knownKey); //true
+
+
+}
+
+
+async function run() {
+  const { contract } = state;
+  try {
+    await contract?.insertVal('mumbaitetn');
+    console.log('finished insertval');
+} catch (error) {
+  toast.error("Error in sending request which is: "+error)
+    console.error('Error sending request:', error);
+}
+
+      }
 
   return (
     <div className="App">
@@ -204,7 +292,12 @@ const handleStoreUserData = async () => {
 <div>
 <button className="text-white p-5 m-4 bg-slate-600" onClick={handleStoreUserData}>submits</button>
 </div>
+<button className="text-white p-2 m-6 bg-cyan-600" onClick={()=>run()}>creates a smart contract table</button>
+<button className="text-white p-2 m-6 bg-cyan-600" onClick={()=>main()}>SHARD</button>
+
+ <input onChange={e=>uploadFileEncrypted(e.target.files)} type="file" />
     </div>
+
   );
 }
 
