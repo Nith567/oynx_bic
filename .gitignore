@@ -45,3 +45,101 @@ typechain-types
 cache
 artifacts
 
+
+   <>
+    <div>
+    <div>
+      {account !== 'None' ? (
+                <p>Connected Account: {account}</p>
+            ) : (
+                <button className="p-2 m-4 text-center bg-zinc-300" onClick={()=>connectWallet()}>Connect </button>
+            )}
+                </div>
+      <div className="text-center m-2 bg-slate-200">
+        <div className="m-1">
+          <label>Title:</label>
+          <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} />
+        </div>
+        <div className="mb-2">
+          <label>Description:</label>
+          <input type="text" value={description} onChange={(e) => setDescription(e.target.value)} />
+        </div>
+        <div className="mb-2">
+          <label>Beneficiary Address:</label>
+          <input type="text" value={beneficiaryAddress} onChange={(e) => setBeneficiaryAddress(e.target.value)} />
+        </div>
+        <div className="mb-2">
+          <label>Amount:</label>
+          <input type="number" value={amount} onChange={(e) => setAmount(parseInt(e.target.value))} />
+        </div>
+        <button onClick={createProposal}>Create Proposal</button>
+      </div>
+  
+     
+        <div>
+        <h3>Vote on Proposal</h3>
+      <label>
+        Proposal ID:
+        <input
+          type="text"
+          value={proposalId}
+          onChange={(e) => setProposalId(e.target.value)}
+        />
+      </label>
+      <label>
+        Vote:
+        <select
+          value={voteChoice}
+          onChange={(e) => setVoteChoice(e.target.value === 'true')}
+        >
+          <option value="true">Yes</option>
+          <option value="false">No</option>
+        </select>
+      </label>
+      <button onClick={handleVote}>Vote</button>
+        </div>
+    
+  <div>
+  <label htmlFor="proposalId">Proposal ID:</label>
+      <input
+        type="text"
+        id="proposalId"
+        name="proposalId"
+        placeholder="Enter Proposal ID"
+        value={proposalId}
+        onChange={(e) => setProposalId(e.target.value)}
+      />
+
+      {/* Button to Pay Beneficiary */}
+      <button onClick={handlePayBeneficiary}>Pay Beneficiary</button>
+  </div>
+      <button className="text-white p-2 m-6 bg-cyan-600" onClick={() => run()}>creates a smart contract table</button>
+    </div>
+    <div>
+    <div className="py-4">
+      <h2 className="text-2xl font-bold mb-4">Proposals</h2>
+      <div className="grid grid-cols-1 gap-4">
+        {proposals?.map((proposal, index) => (
+          <div
+            key={index}
+            className="bg-white p-4 rounded shadow-md"
+          >
+            <h3 className="text-lg font-semibold mb-2">
+              Proposal ID: {proposal[0]}
+            </h3>
+            <p className="mb-2">
+              Amount: {proposal[1]} ETH
+            </p>
+            <p className="mb-2">
+              Duration: {proposal[2]} seconds
+            </p>
+            {/* Include more details as needed */}
+            <p className="text-sm text-gray-500">
+              Proposer: {proposal[9]}
+            </p>
+          </div>
+        ))}
+      </div>
+      </div> 
+    </div>
+  </>

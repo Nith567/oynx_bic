@@ -9,6 +9,8 @@ import { Wallet, getDefaultProvider } from "ethers";
 import { generate } from "@lighthouse-web3/kavach";
 import { getAuthMessage, saveShards, shardKey, recoverKe,AuthMessage, getJWT} from "@lighthouse-web3/kavach";
 
+   
+console.log('-----------------VC Issuance---------------')
 import abi from '../app/contract/Starter.json'
 const contractAddr='0xa985B5B840De07B2180bc62a5bB386a4819B3f13'
 const contractAbi=abi;
@@ -23,7 +25,6 @@ function App() {
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
-    profilePic: "",
     nationalID: '',
     occupation: '',
     relevantDocument: '',
@@ -89,35 +90,71 @@ const handleSubmit = async (e) => {
     }
   };
 
+// const connectWallet = async () => {
+//     try {
+//         const { ethereum } = window;
+
+//         if (ethereum) {
+//             const accounts = await ethereum.request({
+//                 method: 'eth_requestAccounts',
+//             });
+//             if (Array.isArray(accounts) && accounts.length > 0) {
+//               window.ethereum.on('chainChanged', () => {
+//                   window.location.reload();
+//               });
+//             }
+//             window.ethereum.on('chainChanged', () => {
+//                 window.location.reload();
+//             });
+
+//             window.ethereum.on('accountsChanged', () => {
+//                 window.location.reload();
+//             });
+
+//             const provider = new ethers.providers.Web3Provider(window.ethereum);
+//             const signer = provider.getSigner();
+//             const address = await signer.getAddress(); // Wait for the address to be feteched
+//             const contract = new ethers.Contract(contractAddr, contractAbi, signer);
+//             setState( {provider, signer, contract} );
+//             setAccount(accounts[0]); 
+//         } 
+//       }
+//       else {
+//             alert('Please install MetaMask');
+//         }
+//      catch (error) {
+//         console.log("blast is " + error);
+//     }
+// };
 const connectWallet = async () => {
-    try {
-        const { ethereum } = window;
+  try {
+      const { ethereum } = window;
 
-        if (ethereum) {
-            const accounts = await ethereum.request({
-                method: 'eth_requestAccounts',
-            });
+      if (ethereum) {
+          const accounts = await ethereum.request({
+              method: 'eth_requestAccounts',
+          });
 
-            window.ethereum.on('chainChanged', () => {
-                window.location.reload();
-            });
+          window.ethereum.on('chainChanged', () => {
+              window.location.reload();
+          });
 
-            window.ethereum.on('accountsChanged', () => {
-                window.location.reload();
-            });
+          window.ethereum.on('accountsChanged', () => {
+              window.location.reload();
+          });
 
-            const provider = new ethers.providers.Web3Provider(window.ethereum);
-            const signer = provider.getSigner();
-            const address = await signer.getAddress(); // Wait for the address to be feteched
-            const contract = new ethers.Contract(contractAddr, contractAbi, signer);
-            setState( {provider, signer, contract} );
-            setAccount(accounts[0]); 
-        } else {
-            alert('Please install MetaMask');
-        }
-    } catch (error) {
-        console.log(error);
-    }
+          const provider = new ethers.providers.Web3Provider(window.ethereum);
+          const signer = provider.getSigner();
+          const address = await signer.getAddress();
+          const contract = new ethers.Contract(contractAddr, contractAbi, signer);
+          setState( {provider, signer, contract} );
+          setAccount(accounts[0]); 
+      } else {
+          alert('Please install MetaMask');
+      }
+  } catch (error) {
+      console.log(error);
+  }
 };
 
 const handleStoreUserData = async () => {
@@ -230,12 +267,7 @@ async function run() {
           placeholder="Last Name"
           required
         />
-         <input
-          type="file" // Use type="file" for file uploads
-          name="profilePic"
-          onChange={handleChange}
-          accept="image/*" // Specify the accepted file types (images in this case)
-        />
+        
         <input
           type="text"
           name="nationalID"
