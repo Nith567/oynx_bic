@@ -275,7 +275,7 @@ const payBeneficiaryMint= async (proposalId) => {
   
       <button
             className="p-2 bg-zinc-400 hover:bg-zinc-700 text-white font-semibold rounded text-center text-3xl m-3"
-            onClick={contribute}
+            onClick={contributeMint()}
           >
             Contribute
           </button>
@@ -326,7 +326,7 @@ const payBeneficiaryMint= async (proposalId) => {
         </div>
         <button
           className="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded"
-          onClick={createProposal}
+          onClick={proposeMint()}
         >
           Create Proposal
         </button>
@@ -362,7 +362,7 @@ const payBeneficiaryMint= async (proposalId) => {
         </div>
         <button
           className="bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-4 rounded"
-          onClick={handleVote}
+          onClick={voteMint()}
         >
           Vote
         </button>
