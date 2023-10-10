@@ -1,24 +1,20 @@
 'use client'
+import React, { useState,useEffect } from 'react';
 import { Database } from "@tableland/sdk";
 import { ethers } from "ethers";
 import { Signer} from "ethers";
-import React, { useState,useEffect } from 'react';
-// import abi from '../app/contract/Starter.json'
-import abi from '../contract/Dao.json'
-import lighthouse from '@lighthouse-web3/sdk';
+import { 
+  IHybridPaymaster, 
+  SponsorUserOperationDto,
+  PaymasterMode
+} from '@biconomy/paymaster'
+import axios from 'axios';
+import dao from "../utils/abi.json"
 import { toast } from "react-hot-toast";
-import { Wallet, getDefaultProvider } from "ethers";
-import { generate } from "@lighthouse-web3/kavach";
-import { getAuthMessage, saveShards, shardKey, recoverKe,AuthMessage, getJWT} from "@lighthouse-web3/kavach";
-const contractAbi=abi.abi;
-const contractAddr='0x89626F743cF65FEDe76Ea0EaA2AA2cd28656F973'
-
-function App() {
-    const [state, setState] = useState({
-        provider: null,
-        signer: null,
-        contract: null,
-      });
+import { BiconomySmartAccount, BiconomySmartAccountV2 } from "@biconomy/account"
+    const AddressB ='0x8d68EC7C3B0D43174E181113643203A7287D1fA0'
+function DaoApp({ smartAccount, address, provider }) {
+  const [minted, setMinted] = useState(false)
       const [title, setTitle] = useState('');
       const [description, setDescription] = useState('');
       const [beneficiaryAddress, setBeneficiaryAddress] = useState('');
@@ -33,176 +29,250 @@ function App() {
 const [proposal, setProposal] = useState(0);
 const [voteChoice, setVoteChoice] = useState(true);
 
+const [values, setValues] = useState([]);
 
-    const connectWallet = async () => {
-        try {
-            const { ethereum } = window;
-    
-            if (ethereum) {
-                const accounts = await ethereum.request({
-                    method: 'eth_requestAccounts',
-                });
-    
-                window.ethereum.on('chainChanged', () => {
-                    window.location.reload();
-                });
-    
-                window.ethereum.on('accountsChanged', () => {
-                    window.location.reload();
-                });
-    
-                const provider = new ethers.providers.Web3Provider(window.ethereum);
-                const signer = provider.getSigner();
-                const address = await signer.getAddress();
-                const contract = new ethers.Contract(contractAddr, contractAbi, signer);
-                setState( {provider, signer, contract} );
-                setAccount(accounts[0]); 
-            } else {
-                alert('Please install MetaMask');
-            }
-        } catch (error) {
-            console.log(error);
-        }
+useEffect(() => {
+  const fetchData = async () => {
+    try {
+      const response = await axios.get('https://testnets.tableland.network/api/v1/query?statement=SELECT%20*%20FROM%20Intro_80001_7542&format=objects&unwrap=false&extract=false');
+      setValues(response.data);
+    } catch (error) {
+      console.error('Error fetching data:', error);
+    }
+  };
+
+  fetchData();
+}, []);
+
+const contributeMint = async () => {
+  const contract = new ethers.Contract(
+    AddressB,
+     dao,
+    provider,
+  )
+  try {
+    const insertTx = await contract.populateTransaction.contribute({ value: ethers.utils.parseEther('0.02') });
+    console.log(insertTx.data);
+    const tx1 = {
+      to: AddressB,
+      data: insertTx.data,
     };
 
-    const createProposal = async () => {
-        const { contract } = state;
-        try {
-          const tx = await contract.createProposal(title, description, beneficiaryAddress, amount);
-          await tx.wait();
-          console.log('Proposal created successfully');
-        } catch (error) {
-          console.error('Error creating proposal:', error);
-        }
-      };
-    
-  const performVote = async (proposalId, choosen) => {
-    const { contract } = state;
-    try {
-      const tx = await contract?.performVote(proposal, choosen);
-      await tx.wait();
-      console.log('Vote submitted successfully');
-    } catch (error) {
-      console.error('Error submitting vote:', error);
-    }
-  };
+    let userOp = await smartAccount.buildUserOp([tx1]);
+    console.log({ userOp })
+    const biconomyPaymaster = smartAccount.paymaster;
+    let paymasterServiceData = {
+      mode: PaymasterMode.SPONSORED,
+      smartAccountInfo: {
+        name: 'BICONOMY',
+        version: '2.0.0'
+      },
+    };
+    console.log("hai 2");
+    const paymasterAndDataResponse = await biconomyPaymaster.getPaymasterAndData(
+      userOp,
+      paymasterServiceData
+    );
+    userOp.paymasterAndData = paymasterAndDataResponse.paymasterAndData;
+    const userOpResponse = await smartAccount.sendUserOp(userOp);
+    console.log("userOpHash", userOpResponse);
+    const { receipt } = await userOpResponse.wait(1);
+    setMinted(true)
+    console.log("txHash", receipt.transactionHash);
+  } catch (err) {
+    console.error(err);
+    console.log(err)
+  }
+}
 
- 
-  const payBeneficiary = async (proposalId) => {
-    const { contract } = state;
-    try {
-      // Call the payBeneficiary function on your contract
-      const tx = await contract?.payBeneficiary(proposalId);
-      await tx.wait();
-      console.log('Payment to beneficiary successful');
-      // You may want to update your UI or state variables after a successful payment
-    } catch (error) {
-      console.error('Error paying beneficiary:', error);
-      // Handle the error (e.g., show an error message to the user)
-    }
-  };
-  const handlePayBeneficiary = () => {
+
+const proposeMint = async () => {
+  const contract = new ethers.Contract(
+    AddressB,
+     dao,
+    provider,
+  )
+  try {
+    const insertTx = await contract.populateTransaction.createProposal(title, description, beneficiaryAddress, amount);
+    console.log(insertTx.data);
+    const tx1 = {
+      to: AddressB,
+      data: insertTx.data,
+    };
+    let userOp = await smartAccount.buildUserOp([tx1]);
+    console.log({ userOp })
+    const biconomyPaymaster = smartAccount.paymaster;
+    let paymasterServiceData = {
+      mode: PaymasterMode.SPONSORED,
+      smartAccountInfo: {
+        name: 'BICONOMY',
+        version: '2.0.0'
+      },
+    };
+    console.log("hai 2");
+    const paymasterAndDataResponse = await biconomyPaymaster.getPaymasterAndData(
+      userOp,
+      paymasterServiceData
+    );
+    userOp.paymasterAndData = paymasterAndDataResponse.paymasterAndData;
+    const userOpResponse = await smartAccount.sendUserOp(userOp);
+    console.log("userOpHash", userOpResponse);
+    const { receipt } = await userOpResponse.wait(1);
+    setMinted(true)
+    console.log("txHash", receipt.transactionHash);
+  } catch (err) {
+    console.error(err);
+    console.log(err)
+  }
+}
+
+
+
+const voteMint= async (proposalId, choosen) => {
+  const contract = new ethers.Contract(
+    AddressB,
+     dao,
+    provider,
+  )
+  try {
+    const insertTx = await contract.populateTransaction.performVote(proposal, choosen)
+    console.log(insertTx.data);
+    const tx1 = {
+      to: AddressB,
+      data: insertTx.data,
+    };
+    let userOp = await smartAccount.buildUserOp([tx1]);
+    console.log({ userOp })
+    const biconomyPaymaster = smartAccount.paymaster;
+    let paymasterServiceData = {
+      mode: PaymasterMode.SPONSORED,
+      smartAccountInfo: {
+        name: 'BICONOMY',
+        version: '2.0.0'
+      },
+    };
+    console.log("hai 2");
+    const paymasterAndDataResponse = await biconomyPaymaster.getPaymasterAndData(
+      userOp,
+      paymasterServiceData
+    );
+    userOp.paymasterAndData = paymasterAndDataResponse.paymasterAndData;
+    const userOpResponse = await smartAccount.sendUserOp(userOp);
+    console.log("userOpHash", userOpResponse);
+    const { receipt } = await userOpResponse.wait(1);
+    setMinted(true)
+    console.log("txHash", receipt.transactionHash);
+  } catch (err) {
+    console.error(err);
+    console.log(err)
+  }
+}
+
+const payBeneficiaryMint= async (proposalId) => {
+  const contract = new ethers.Contract(
+    AddressB,
+     dao,
+    provider,
+  )
+  try {
+    const insertTx = await contract.populateTransaction.payBeneficiary(proposalId)
+    console.log(insertTx.data);
+    const tx1 = {
+      to: AddressB,
+      data: insertTx.data,
+    };
+    let userOp = await smartAccount.buildUserOp([tx1]);
+    console.log({ userOp })
+    const biconomyPaymaster = smartAccount.paymaster;
+    let paymasterServiceData = {
+      mode: PaymasterMode.SPONSORED,
+      smartAccountInfo: {
+        name: 'BICONOMY',
+        version: '2.0.0'
+      },
+    };
+    console.log("hai 2");
+    const paymasterAndDataResponse = await biconomyPaymaster.getPaymasterAndData(
+      userOp,
+      paymasterServiceData
+    );
+    userOp.paymasterAndData = paymasterAndDataResponse.paymasterAndData;
+    const userOpResponse = await smartAccount.sendUserOp(userOp);
+    console.log("userOpHash", userOpResponse);
+    const { receipt } = await userOpResponse.wait(1);
+    setMinted(true)
+    console.log("txHash", receipt.transactionHash);
+  } catch (err) {
+    console.error(err);
+    console.log(err)
+  }
+}
+ const handlePayBeneficiarymint = () => {
     const { contract } = state;
     // Call the payBeneficiary function with the proposalId
     if (proposalId) {
-      payBeneficiary(proposalId);
+      payBeneficiaryMint(proposalId);
       // Optionally, you can reset the proposalId state to clear the input field
       setProposalId('');
     }
   };
 
-  const contribute = async () => {
-    const { contract } = state;
+  const fetchPropMint= async()=> {
+    const contract = new ethers.Contract(
+      AddressB,
+       dao,
+      provider,
+    )
     try {
+      const insertTx = await contract.populateTransaction.getProposals()
+      console.log(insertTx.data);
+      const tx1 = {
+        to: AddressB,
+        data: insertTx.data,
+      };
+      let userOp = await smartAccount.buildUserOp([tx1]);
+      console.log({ userOp })
+      const biconomyPaymaster = smartAccount.paymaster;
+      let paymasterServiceData = {
+        mode: PaymasterMode.SPONSORED,
+        smartAccountInfo: {
+          name: 'BICONOMY',
+          version: '2.0.0'
+        },
+      };
+      const paymasterAndDataResponse = await biconomyPaymaster.getPaymasterAndData(
+        userOp,
+        paymasterServiceData
+      );
+      userOp.paymasterAndData = paymasterAndDataResponse.paymasterAndData;
+      const userOpResponse = await smartAccount.sendUserOp(userOp);
+      console.log("userOpHash", userOpResponse);
+      const { receipt } = await userOpResponse.wait(1);
+      setMinted(true)
+      console.log("txHash", receipt.transactionHash);
+      if (insertTx.data) {
+        // If proposals is not undefined, set it to the state
+        setInfo(insertTx.data);
 
-      // Call the contribute function on your contract
-      const tx = await contract.contribute({ value: ethers.utils.parseEther('8') });
-      await tx.wait();
-      console.log('Contribution successful');
-      // You may want to update your UI or state variables after a successful contribution
-    } catch (error) {
-      console.error('Error contributing:', error);
-      // Handle the error (e.g., show an error message to the user)
+        console.log('successfully fetched'+info);
+      } 
+    } catch (err) {
+      console.error(err);
+      console.log(err)
     }
-  };
-
-  const handleVote = async () => {
-    // // Validate that proposalId is a valid number and voteChoice is a boolean
-    if (!proposal || isNaN(proposal)) {
-      alert('Please enter a valid proposal ID (a number).');
-      return;
-    }
-
-    // Convert the voteChoice boolean to a string ('true' or 'false')
-    const choosen = voteChoice.toString();
-
-    // Call the performVote function with proposalId and choosen
-    await performVote(proposalId, choosen);
-
-    // Clear the form fields after voting
-    setProposal('');
-    setVoteChoice(true); // Reset to "Yes" as the default choice
-  };
-
-
-  const fetchProp = async () => {
-    const { contract } = state;
-    // try {
-    //   // Call the contribute function on your contract
-    //   const props = await contract?.getProposals();
-    //   setInfo(props);
-    //   console.log('list successful');
-    //   // You may want to update your UI or state variables after a successful contribution
-    // } catch (error) {
-    //   console.error('Error contributing:', error);
-    //   // Handle the error (e.g., show an error message to the user)
-    // }
-    try {
-        // Call the getProposals function on your contract
-        const proposals = await contract?.getProposals();
-    
-        if (proposals) {
-          // If proposals is not undefined, set it to the state
-          setInfo(proposals);
-
-          console.log('List successful'+info);
-        } else {
-          // Handle the case where proposals is undefined
-          console.error('No proposals found');
-        }
-      } catch (error) {
-        console.error('Error fetching proposals:', error);
-        // Handle the error (e.g., show an error message to the user)
-      }
-  };
-
-    async function run() {
-        const { contract } = state;
-        try {
-          await contract?.insertVal('mumbaitetn');
-          console.log('finished insertval');
-      } catch (error) {
-        toast.error("Error in sending request which is: "+error)
-          console.error('Error sending request:', error);
-      } }
-      
+  }
   return (
     <>
+      <div className="container mx-auto p-4">
+      <h1 className="text-3xl font-bold mb-4">Values:</h1>
+      <ul>
+        {values.map((item) => (
+          <li key={item.id} className="mb-2 bg-gray-100 p-2 rounded-md">{item.val}</li>
+        ))}
+      </ul>
+    </div>
     <div className="bg-gray-100 p-6">
-      <div className="mb-4">
-        {account !== 'None' ? (
-          <p className="text-lg font-semibold">
-            Connected Account: {account}
-          </p>
-        ) : (
-          <button
-            className="p-2 bg-zinc-300 hover:bg-zinc-400 text-white font-semibold rounded"
-            onClick={connectWallet}
-          >
-            Connect Wallet
-          </button>
-        )}
-      </div>
+  
       <button
             className="p-2 bg-zinc-400 hover:bg-zinc-700 text-white font-semibold rounded text-center text-3xl m-3"
             onClick={contribute}
@@ -313,7 +383,7 @@ const [voteChoice, setVoteChoice] = useState(true);
         />
         <button
           className="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded mt-2"
-          onClick={handlePayBeneficiary}
+          onClick={handlePayBeneficiarymint}
         >
           Pay Beneficiary
         </button>
@@ -324,7 +394,7 @@ const [voteChoice, setVoteChoice] = useState(true);
       <h2 className="text-2xl font-bold mb-4">
         Proposals
       </h2>
-      <button onClick={fetchProp}>Fetch Proposals</button>
+      <button className="bg-purple-500 hover:bg-blue-600 text-white font-semibold p-2 rounded-md "onClick={fetchPropMint}>Fetch Proposals</button>
       <div className="grid grid-cols-2 gap-1">
       <div className="overflow-x-auto flex justify-center">
   <div className="overflow-x-auto">
@@ -368,51 +438,10 @@ const [voteChoice, setVoteChoice] = useState(true);
   </div>
 </div>
 
-      {/* <div className="grid grid-cols-2 gap-1">
-      <table className="table-auto">
-  <thead>
-    <tr>
-      <th className="px-4 py-2">ID</th>
-      <th className="px-4 py-2">Amount</th>
-      <th className="px-4 py-2">Title</th>
-      <th className="px-4 py-2">Description</th>
-      <th className="px-4 py-2">Paid</th>
-      <th className="px-4 py-2">Passed</th>
-      <th className="px-4 py-2">Proposer</th>
-      <th className="px-4 py-2">Upvotes</th>
-      <th className="px-4 py-2">Downvotes</th>
-      <th className="px-4 py-2">Beneficiary</th>
-      <th className="px-4 py-2">Executor</th>
-      <th className="px-4 py-2">Duration</th>
-    </tr>
-  </thead>
-  <tbody>
-    {info?.map((proposal) => (
-      <tr key={proposal.id}>
-     
-        <td className="border px-4 py-2">{proposal?.id.toString()}</td>
-        <td className="border px-4 py-2">{proposal.amount.toString()} wei</td>
-        <td className="border px-4 py-2">{proposal.title.toString()}</td>
-        <td className="border px-4 py-2">{proposal.description}</td>
-        <td className="border px-4 py-2">{proposal.amount.toString()} wei</td>
-        <td className="border px-4 py-2">{proposal.proposer.toString().substring(0,9)}</td>
-        <td className="border px-4 py-2">{proposal.upvotes.toString()}</td>
-        <td className="border px-4 py-2">{proposal.downvotes.toString()}</td>
-        <td className="border px-4 py-2">{proposal.beneficiary.toString()}</td> 
-        <td className="border px-4 py-2">{proposal.amount.toString()} wei</td>
-        <td className="border px-4 py-2">{proposal.executor.toString()}</td>
-        <td className="border px-4 py-2">{proposal.duration.toString()} seconds</td>
-      
-      </tr>
-    ))}
-  </tbody>
-</table>
-
-    </div> */}
   </div>
 </>
 
   )
 }
 
-export default App;
+export default DaoApp;
