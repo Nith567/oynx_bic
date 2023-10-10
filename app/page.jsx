@@ -270,7 +270,7 @@ setPic(output.data.Hash)
     </div>
 <div>
 </div>
-      <div onClick={logOut}>Logout</div>
+      <div className="bg-purple-600 hover:bg-blue-600 text-white font-semibold w-24 h-9 px-3 py-2 rounded-md " onClick={logOut}> Logout</div>
 
     </div>
 
