@@ -65,9 +65,11 @@ const [provider, setProvider] = useState(null);
   });
  
 const bundler= new Bundler({
+
   bundlerUrl:'https://bundler.biconomy.io/api/v2/80001/nJPK7B3ru.dd7f7861-190d-41bd-af80-6877f74b8f44', 
   chainId: ChainId.POLYGON_MUMBAI,
-  entryPointAddress:DEFAULT_ENTRYPOINT_ADDRESS
+  entryPointAddress:DEFAULT_ENTRYPOINT_ADDRESS,
+
 })
 
 const paymaster= new BiconomyPaymaster({
@@ -95,11 +97,13 @@ const connect = async () => {
     })
 
     let biconomySmartAccount = await BiconomySmartAccountV2.create({
+      signer:signer,
+      rpcUrl:'https://polygon-mumbai.g.alchemy.com/v2/4Hsr0IJHsmuXfcGFiI4TIPPJo7ZCOpDa',
       chainId: ChainId.POLYGON_MUMBAI,
       bundler: bundler, 
       paymaster: paymaster,
       entryPointAddress: DEFAULT_ENTRYPOINT_ADDRESS,
-      defaultValidationModule: my_module,
+      defaultValidationModule:  my_module,
       activeValidationModule: my_module
     })
     setAddress( await biconomySmartAccount.getAccountAddress())
@@ -165,7 +169,7 @@ setPic(output.data.Hash)
       {loading && <p>Loading Smart Account...</p>}
       {address && <h2>Smart Account: {address}</h2>}
       {smartAccount && provider && <Minter smartAccount={smartAccount} cid={cid} address={address} provider={provider} />}
-      {      isDaoRoute && smartAccount && provider && <DaoApp smartAccount={smartAccount} address={address} provider={provider} />}
+      {  smartAccount && provider && <DaoApp smartAccount={smartAccount} address={address} provider={provider} />}
 </div>
         <div className="text-center flex justify-center items-center mt-1 mb-4">
         <input onChange={e=>uploadFile(e.target.files)} type="file"  className="border border-gray-300 p-2 rounded-md shadow-sm focus:outline-none focus:border-blue-600" />
